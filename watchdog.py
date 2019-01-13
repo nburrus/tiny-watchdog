@@ -19,6 +19,7 @@ def readImages(s):
 
 def parseCommandLine():
     parser = argparse.ArgumentParser(description='Connect to an image server, detect motion alarms and save alerts.')
+    parser.add_argument('server_url', help='Server address and port in zmq format. Example: "tcp://myserver.com:4242"')
     parser.add_argument('--image-server-password', help='Password to connect to the image server')
     return parser.parse_args()
 
@@ -31,6 +32,6 @@ if __name__ == "__main__":
         s.plain_username = b'admin'
         s.plain_password = args.image_server_password.encode('ascii')        
 
-    s.connect("tcp://127.0.0.1:4242")
+    s.connect(args.server_url)
     s.setsockopt(zmq.SUBSCRIBE, b'')
     readImages(s)

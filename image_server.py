@@ -61,6 +61,7 @@ def parseCommandLine():
     parser.add_argument('video_url', help='RTSP URL (or video file)')
     parser.add_argument('width', type=int, help='Image width')
     parser.add_argument('height', type=int, help='Image height')
+    parser.add_argument('--bind-url', help='ZMQ bind URL. Default is "tcp://*:4242"', default='tcp://*:4242')
     return parser.parse_args()
 
 if __name__ == "__main__":
@@ -76,7 +77,7 @@ if __name__ == "__main__":
     s = ctx.socket(zmq.PUB)
     if args.password:
        s.plain_server = True
-    s.bind("tcp://*:4242")
+    s.bind(args.bind_url)
 
     # Retry to capture data every second, in case the
     # stream stopped.
