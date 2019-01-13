@@ -10,7 +10,9 @@ import argparse
 
 def readImages(s):
     while True:
-        image = s.recv_pyobj()
+        jpeg = s.recv_pyobj()
+        print (len(jpeg))
+        image = cv.imdecode(jpeg, cv.IMREAD_COLOR)
         print (image.shape)
         cv.imshow ('received', image)
         cv.waitKey(10)
