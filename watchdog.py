@@ -10,7 +10,11 @@ import argparse
 
 def readImages(s):
     while True:
-        jpeg = s.recv_pyobj()
+        try:
+            jpeg = s.recv_pyobj()
+        except zmq.error.Again as e:
+            sys.stderr.write ("Could not connect to the server. Check that the port is open and the password is correct.\n")
+            continue
         print (len(jpeg))
         image = cv.imdecode(jpeg, cv.IMREAD_COLOR)
         print (image.shape)
@@ -36,4 +40,5 @@ if __name__ == "__main__":
 
     s.connect(args.server_url)
     s.setsockopt(zmq.SUBSCRIBE, b'')
+    s.setsockopt(zmq.RCVTIMEO, 2000)
     readImages(s)
