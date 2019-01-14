@@ -15,7 +15,9 @@ def readImages(s):
         image = cv.imdecode(jpeg, cv.IMREAD_COLOR)
         print (image.shape)
         cv.imshow ('received', image)
-        cv.waitKey(10)
+        k = cv.waitKey(10)
+        if k == ord('q'):
+            break
 
 def parseCommandLine():
     parser = argparse.ArgumentParser(description='Connect to an image server, detect motion alarms and save alerts.')
