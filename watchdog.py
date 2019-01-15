@@ -35,7 +35,7 @@ def createMp4(filenames, outputMp4):
     images = [cv.imread(f) for f in filenames]
     height, width = images[0].shape[0:2]
     fourcc = cv.VideoWriter_fourcc(*'H264')
-    out = cv.VideoWriter(outputMp4, fourcc, 12, (width,height))
+    out = cv.VideoWriter(outputMp4, fourcc, 24, (width,height))
     for im in images:
         out.write(im)
     out.release()
