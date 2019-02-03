@@ -40,6 +40,27 @@ def createMp4(filenames, outputMp4):
         out.write(im)
     out.release()
 
+class MotionDetector:
+    def __init__(self, options):
+        self.options = options
+        self.fgbg = cv.bgsegm.createBackgroundSubtractorMOG()
+        # self.fgbg = cv.bgsegm.createBackgroundSubtractorGSOC()
+        self.kernel = cv.getStructuringElement(cv.MORPH_ELLIPSE,(3,3))
+
+        self.blobDetector = cv.SimpleBlobDetector_create()
+
+    def processImage(self, image):
+        return
+        fgmask = self.fgbg.apply(image)
+        fgmask = cv.morphologyEx(fgmask, cv.MORPH_OPEN, self.kernel)
+        print (fgmask.dtype)
+
+        blobs = self.blobDetector.detect(fgmask) 
+        im_with_blobs = cv.drawKeypoints(image, blobs, np.array([]), (0,0,255), cv.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
+
+        cv.imshow('mask',fgmask)        
+        cv.imshow('blobs',im_with_blobs)
+
 class Archiver:    
     def __init__(self, options):
         self.options = options
@@ -75,7 +96,7 @@ class Archiver:
                 os.makedirs(outputDir)
             mp4Filename = None
             if isPartial:
-                mp4Filename = "{:04d}-{:02d}-{:02d}_partial_{}.mp4".format(year, month, day, len(imageFiles))
+                mp4Filename = "{:04d}-{:02d}-{:02d}_partial_{:03d}.mp4".format(year, month, day, len(imageFiles))
             else:
                 mp4Filename = "{:04d}-{:02d}-{:02d}.mp4".format(year, month, day)
                 partialFiles = glob.glob(outputDir + '/{:04d}-{:02d}-{:02d}_partial*.mp4'.format(year, month, day))
@@ -153,6 +174,7 @@ class Archiver:
 class WatchDog:
     def __init__(self, options):
         self.archiver = Archiver(options)
+        self.motionDetector = MotionDetector(options)
         self.zmqCtx = zmq.Context()
         self.options = options
         if not os.path.isdir(self.options.data_dir):
@@ -183,8 +205,9 @@ class WatchDog:
             # print (len(jpeg))
             image = cv.imdecode(jpeg, cv.IMREAD_COLOR)
             # print (image.shape)
-            self.archiver.processImage (image)
             cv.imshow ('received', image)
+            self.archiver.processImage (image)
+            self.motionDetector.processImage (image)
             k = cv.waitKey(10)
             if k == ord('q'):
                 break
