@@ -13,6 +13,9 @@ import glob
 import re
 import imageio
 import shutil
+import ffmpeg
+
+debug = False
 
 #  tmp_motion_alert_buffer/
 #    1 image per second over the past 30 seconds
@@ -34,11 +37,23 @@ def isSameHour(time1, time2):
 def createMp4(filenames, outputMp4):
     images = [cv.imread(f) for f in filenames]
     height, width = images[0].shape[0:2]
-    fourcc = cv.VideoWriter_fourcc(*'H264')
-    out = cv.VideoWriter(outputMp4, fourcc, 24, (width,height))
-    for im in images:
-        out.write(im)
-    out.release()
+
+    ffmpeg_process = (
+        ffmpeg
+        .input('pipe:', format='rawvideo', pix_fmt='rgb24', s='{}x{}'.format(width, height))
+        .output(outputMp4, pix_fmt='yuv420p')
+        .run_async(pipe_stdin=True)
+    )
+    for image in images:
+        print ('image.shape', image.shape)
+        ffmpeg_process.stdin.write(
+            image
+            .astype(np.uint8)
+            .tobytes()
+        )
+    ffmpeg_process.stdin.close()
+    ffmpeg_process.wait()
+    print ("{} written".format(outputMp4))
 
 class MotionDetector:
     def __init__(self, options):
@@ -58,8 +73,9 @@ class MotionDetector:
         blobs = self.blobDetector.detect(fgmask) 
         im_with_blobs = cv.drawKeypoints(image, blobs, np.array([]), (0,0,255), cv.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
 
-        cv.imshow('mask',fgmask)        
-        cv.imshow('blobs',im_with_blobs)
+        if debug:
+            cv.imshow('mask',fgmask)        
+            cv.imshow('blobs',im_with_blobs)
 
 class Archiver:    
     def __init__(self, options):
@@ -205,7 +221,8 @@ class WatchDog:
             # print (len(jpeg))
             image = cv.imdecode(jpeg, cv.IMREAD_COLOR)
             # print (image.shape)
-            cv.imshow ('received', image)
+            if debug:
+                cv.imshow ('received', image)
             self.archiver.processImage (image)
             self.motionDetector.processImage (image)
             k = cv.waitKey(10)
