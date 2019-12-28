@@ -2,7 +2,6 @@
 
 import sys
 import cv2 as cv
-import ffmpeg
 import numpy as np
 import zmq
 import zmq.auth.thread
@@ -12,33 +11,54 @@ import argparse
 
 debug = False
 
-def runVideoCapture(args, s):
-    ffmpeg_process = (
-        ffmpeg
-        .input(args.video_url)
-        .output('pipe:', format='rawvideo', pix_fmt='bgr24')
-        .run_async(pipe_stdout=True)
-    )
+minDeltaTime = 1.0
+maxWidthToSend = 640
+jpegQuality = 90
 
-    minDeltaTime = 1.0
-    maxWidthToSend = 640
-    jpegQuality = 90
-    scaleFactor = args.width / float(maxWidthToSend)
-    subsampledSize = None
-    if (scaleFactor > 1.5):
-        subsampledSize = (int(round(args.width / scaleFactor)), int(round(args.height / scaleFactor)))
+class FFMpegCaptureSource:
+    def __init__(self, args):
+        self.width = args.width
+        self.height = args.height
+        self.video_url = args.source
+        assert args.width and args.height, "You must specify --width and --height when using RTSP"
+    
+    def start_capture(self):
+        import ffmpeg
+        self.ffmpeg_process = (
+            ffmpeg
+            .input(self.video_url)
+            .output('pipe:', format='rawvideo', pix_fmt='bgr24')
+            .run_async(pipe_stdout=True)
+        )
 
-    lastImageSentTimestamp = None
-    while True:
-        in_bytes = ffmpeg_process.stdout.read(args.width * args.height * 3)
+    def stop_capture(self):
+        self.ffmpeg_process.wait()
+
+    def capture_next_frame(self):
+        in_bytes = self.ffmpeg_process.stdout.read(self.width * self.height * 3)
         if not in_bytes:
             print ("Cannot read images anymore")
-            break
+            return None
         in_frame = (
             np
             .frombuffer(in_bytes, np.uint8)
-            .reshape([args.height, args.width, 3])
+            .reshape([self.height, self.width, 3])
         )
+        return in_frame
+
+def runVideoCapture(args, capture_source, s):    
+    capture_source.start_capture()
+    scaleFactor = capture_source.width / float(maxWidthToSend)
+    subsampledSize = None
+    if (scaleFactor > 1.5):
+        subsampledSize = (int(round(capture_source.width / scaleFactor)), int(round(capture_source.height / scaleFactor)))
+
+    lastImageSentTimestamp = None
+    while True:
+        in_frame = capture_source.capture_next_frame()
+        if in_frame is None:
+            print ("Cannot read images anymore")
+            break
         
         now = time.time()        
         if not lastImageSentTimestamp or (now-lastImageSentTimestamp) >= minDeltaTime:
@@ -53,14 +73,14 @@ def runVideoCapture(args, s):
                 cv.imshow ('image', in_frame)
                 cv.waitKey (1)
 
-    ffmpeg_process.wait()
+    capture_source.stop_capture()    
 
 def parseCommandLine():
     parser = argparse.ArgumentParser(description='Connects to a local RTSP stream and stream images via zmq')
+    parser.add_argument('source', help='picamera, RTSP URL or video file')
     parser.add_argument('--password', help='Password to connect to the image server')
-    parser.add_argument('video_url', help='RTSP URL (or video file)')
-    parser.add_argument('width', type=int, help='Image width')
-    parser.add_argument('height', type=int, help='Image height')
+    parser.add_argument('--width', type=int, help='Image width, required if RTSP URL')
+    parser.add_argument('--height', type=int, help='Image height, required if RTSP URL')
     parser.add_argument('--bind-url', help='ZMQ bind URL. Default is "tcp://*:4242"', default='tcp://*:4242')
     return parser.parse_args()
 
@@ -79,9 +99,15 @@ if __name__ == "__main__":
        s.plain_server = True
     s.bind(args.bind_url)
 
+    capture_source = None
+    if args.source == 'picamera':
+        capture_source = None
+    else:
+        capture_source = FFMpegCaptureSource(args)
+
     # Retry to capture data every second, in case the
     # stream stopped.
     while True:
-        runVideoCapture(args, s)
+        runVideoCapture(args, capture_source, s)
         time.sleep (1)
     auth.stop()
