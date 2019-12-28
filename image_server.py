@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+from datetime import datetime
 import sys
 import cv2 as cv
 import numpy as np
@@ -53,6 +54,9 @@ class PiCameraCaptureSource:
         import picamera, picamera.array
         self.camera = picamera.PiCamera(resolution=(self.width, self.height))
         self.bgr_buffer = np.empty((480, 640, 3), dtype=np.uint8)
+        self.camera.annotate_background = picamera.Color('black')
+        self.camera.annotate_text_size = 16
+        self.camera.awb_gains = (0.5,0.5)
     
     def start_capture(self):
         self.camera.start_preview()
@@ -62,6 +66,7 @@ class PiCameraCaptureSource:
 
     def capture_next_frame(self):
         try:
+            self.camera.annotate_text = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
             self.camera.capture(self.bgr_buffer, 'bgr')
         except:
             print ("Failed to capture image.")
@@ -103,11 +108,13 @@ def parseCommandLine():
     parser.add_argument('width', type=int, help='Source image width')
     parser.add_argument('height', type=int, help='Source image height')
     parser.add_argument('--password', help='Password to connect to the image server')    
+    parser.add_argument('--debug', help='Enable debugging', action='store_true')
     parser.add_argument('--bind-url', help='ZMQ bind URL. Default is "tcp://*:4242"', default='tcp://*:4242')
     return parser.parse_args()
 
 if __name__ == "__main__":
     args = parseCommandLine()
+    debug = args.debug
 
     ctx = zmq.Context()
 
