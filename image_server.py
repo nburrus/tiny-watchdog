@@ -20,7 +20,6 @@ class FFMpegCaptureSource:
         self.width = args.width
         self.height = args.height
         self.video_url = args.source
-        assert args.width and args.height, "You must specify --width and --height when using RTSP"
     
     def start_capture(self):
         import ffmpeg
@@ -45,6 +44,29 @@ class FFMpegCaptureSource:
             .reshape([self.height, self.width, 3])
         )
         return in_frame
+
+class PiCameraCaptureSource:
+    def __init__(self, args):
+        self.width = args.width
+        self.height = args.height
+
+        import picamera, picamera.array
+        self.camera = picamera.PiCamera(resolution=(self.width, self.height))
+        self.bgr_buffer = np.empty((480, 640, 3), dtype=np.uint8)
+    
+    def start_capture(self):
+        self.camera.start_preview()
+
+    def stop_capture(self):
+        self.camera.close()
+
+    def capture_next_frame(self):
+        try:
+            self.camera.capture(self.bgr_buffer, 'bgr')
+        except:
+            print ("Failed to capture image.")
+            return None
+        return self.bgr_buffer
 
 def runVideoCapture(args, capture_source, s):    
     capture_source.start_capture()
@@ -78,9 +100,9 @@ def runVideoCapture(args, capture_source, s):
 def parseCommandLine():
     parser = argparse.ArgumentParser(description='Connects to a local RTSP stream and stream images via zmq')
     parser.add_argument('source', help='picamera, RTSP URL or video file')
-    parser.add_argument('--password', help='Password to connect to the image server')
-    parser.add_argument('--width', type=int, help='Image width, required if RTSP URL')
-    parser.add_argument('--height', type=int, help='Image height, required if RTSP URL')
+    parser.add_argument('width', type=int, help='Source image width')
+    parser.add_argument('height', type=int, help='Source image height')
+    parser.add_argument('--password', help='Password to connect to the image server')    
     parser.add_argument('--bind-url', help='ZMQ bind URL. Default is "tcp://*:4242"', default='tcp://*:4242')
     return parser.parse_args()
 
@@ -101,7 +123,7 @@ if __name__ == "__main__":
 
     capture_source = None
     if args.source == 'picamera':
-        capture_source = None
+        capture_source = PiCameraCaptureSource(args)
     else:
         capture_source = FFMpegCaptureSource(args)
 
