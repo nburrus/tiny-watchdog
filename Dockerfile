@@ -5,9 +5,10 @@ RUN apt-get update && apt-get install -y \
     libglib2.0-0 \
     libsm6 \
     libxext6 \
-    libxrender-dev
+    libxrender-dev \
+    ffmpeg
 
-RUN pip install opencv-python opencv-contrib-python flask imageio zmq ffmpeg
+RUN pip install opencv-python opencv-contrib-python flask imageio zmq ffmpeg-python
 
 COPY watchdog.py /deploy/
 COPY image_server.py /deploy/
