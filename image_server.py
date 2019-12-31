@@ -56,7 +56,9 @@ class PiCameraCaptureSource:
         self.bgr_buffer = np.empty((480, 640, 3), dtype=np.uint8)
         self.camera.annotate_background = picamera.Color('black')
         self.camera.annotate_text_size = 16
-        self.camera.awb_gains = (0.5,0.5)
+        self.camera.awb_mode  = 'off'
+        self.camera.awb_gains = (1.0, 1.0)
+        self.camera.vflip = True
     
     def start_capture(self):
         self.camera.start_preview()
@@ -96,6 +98,7 @@ def runVideoCapture(args, capture_source, s):
             data = cv.imencode('.jpg', final_frame)[1]
             s.send_pyobj(data)
             lastImageSentTimestamp = now
+            print (f"Image sent with size {capture_source.width} x {capture_source.height}.")
             if debug:
                 cv.imshow ('image', in_frame)
                 cv.waitKey (1)
