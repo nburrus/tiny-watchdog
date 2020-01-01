@@ -1,9 +1,6 @@
 #!/usr/bin/env python3
 
 import sys
-import cv2 as cv
-import numpy as np
-import zmq
 import time
 from datetime import datetime, timedelta
 import logging
@@ -11,9 +8,15 @@ import argparse
 import os
 import glob
 import re
-import imageio
 import shutil
+from pathlib import Path
+from collections import namedtuple
+
+import imageio
 import ffmpeg
+import cv2 as cv
+import numpy as np
+import zmq
 
 import motion_detector
 
@@ -68,8 +71,16 @@ class Archiver:
         if not os.path.isdir(self.recent_buffer_dir):
             os.makedirs(self.recent_buffer_dir)
 
+        self.alerts_dir = os.path.join(self.options.data_dir, 'alerts')
+        if not os.path.isdir(self.alerts_dir):
+            os.makedirs(self.alerts_dir)
+
+        self.alert_db = str(Path(self.alerts_dir) / 'alerts.db')
+        open(self.alert_db, 'a') # make sure it gets created
+
         self.previousTime = None
         self.fakePreviousNow = None
+        self.activeAlerts = []
 
     def maybeGuessPreviousTimeFromLastRun(self, imageDir, now):
         files = sorted(glob.glob(imageDir + '/*.jpg'))
@@ -156,6 +167,53 @@ class Archiver:
             for f in toRemove:
                 os.remove(os.path.join(self.recent_buffer_dir, f))
 
+    def handleCurrentAlert(self, now, image):
+        alerts_to_remove = []
+        for alert in self.activeAlerts:
+            if (now-alert.start_time).seconds > self.options.seconds_to_record_after_alert:
+                alerts_to_remove.append(alert)
+                continue
+            imageName = now.strftime("%Y-%m-%d_%H_%M_%S.jpg")            
+            cv.imwrite(str(alert.folder_path / imageName), image)
+        
+        for a in alerts_to_remove:
+            self.finalizeAlert (a)
+
+    def finalizeAlert(self, alert):
+        print (f"Alert {alert.folder_name} is finished, generating the mp4")        
+        recorded_files = sorted(alert.folder_path.glob('*.jpg'))
+        recorded_files = [str(f) for f in recorded_files]
+        outputMp4 = str(alert.folder_path / 'before_and_after.mp4')
+        createMp4(recorded_files, outputMp4)
+        for f in recorded_files:
+            if not '_annotated.jpg' in f:
+                os.remove(f)
+        self.activeAlerts.remove(alert)
+
+    def recordNewAlert(self, r: motion_detector.Results):
+        event_name = r.event.name
+        now = datetime.now()
+        formatted_now = now.strftime(f"%Y-%m-%d_%H_%M_%S")
+        folder_name = f"{formatted_now}_{event_name}"
+        folder_path = Path(self.alerts_dir) / folder_name
+        os.makedirs(folder_path)
+        print ("Recording new alert into ", folder_name)
+
+        images = sorted (os.listdir(self.recent_buffer_dir))
+        for im in images:
+            shutil.copy(os.path.join(self.recent_buffer_dir, im), folder_path / im)
+
+        # Save the annotated image.
+        annotated_image_name = f"{formatted_now}_{event_name}_annotated.jpg"
+        cv.imwrite(str(folder_path / annotated_image_name), r.annotated_image)
+
+        Alert = namedtuple('Alert', 'start_time folder_name folder_path')
+        active_alert = Alert(start_time = now, folder_name=folder_name, folder_path=folder_path)
+        with open(self.alert_db, 'a') as f:
+            json_str = f"{{'folder_name': '{folder_name}'}}"
+            f.write(f"{formatted_now} {event_name} {json_str}\n")
+        self.activeAlerts.append (active_alert)
+
     def processImage(self, image):
         now = datetime.now()
 
@@ -166,11 +224,12 @@ class Archiver:
 
         self.handleDayBuffer (now, image)        
         self.handleRecentBuffer (now, image)
+        self.handleCurrentAlert (now, image)
 
 class WatchDog:
     def __init__(self, options):
         self.archiver = Archiver(options)
-        self.motionDetector = MotionDetector(options)
+        self.motionDetector = motion_detector.Detector()
         self.zmqCtx = zmq.Context()
         self.options = options
         if not os.path.isdir(self.options.data_dir):
@@ -204,7 +263,10 @@ class WatchDog:
             if debug:
                 cv.imshow ('received', image)
             self.archiver.processImage (image)
-            self.motionDetector.processImage (image)
+            e = self.motionDetector.processImage (image)
+            if e.event != motion_detector.Event.NONE:
+                self.archiver.recordNewAlert (e)
+
             k = cv.waitKey(10)
             if k == ord('q'):
                 break
@@ -214,8 +276,9 @@ def parseCommandLine():
     parser.add_argument('server_url', help='Server address and port in zmq format. Example: "tcp://myserver.com:4242"')
     parser.add_argument('--image-server-password', help='Password to connect to the image server')
     parser.add_argument('--data-dir', help='Directory used to save images and alerts', default='data')
-    parser.add_argument('--recent-buffer-size', help='Number of images to keep in the recent buffer', type=int, default=60)
+    parser.add_argument('--recent-buffer-size', help='Number of images to keep in the recent buffer', type=int, default=30)
     parser.add_argument('--num-images-per-day', help='Number of images in the daily summary (default is 4 per hour)', type=int, default=24*4)
+    parser.add_argument('--seconds-to-record-after-alert', help="Number of seconds to record after an alert.", default=10)
     return parser.parse_args()
 
 if __name__ == "__main__":

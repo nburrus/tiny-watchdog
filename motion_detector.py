@@ -21,13 +21,13 @@ no_event = Results(event=Event.NONE, annotated_image=None)
 class Options:
     def __init__(self):
         self.num_images_to_initialize = 120
-        self.min_seconds_between_detections = 60
+        self.min_seconds_between_detections = 120
 
 class Detector:
     def __init__(self, options=Options()):
         self.options = options
         # self.fgbg = cv.bgsegm.createBackgroundSubtractorMOG()
-        # self.fgbg = cv.bgsegm.createBackgroundSubtractorGMG(3)
+        # self.fgbg = cv.bgsegm.createBackgroundSubtractorGMG()
         self.fgbg = cv.bgsegm.createBackgroundSubtractorCNT()
         #self.fgbg = cv.bgsegm.createBackgroundSubtractorMOG()
         self.kernel = cv.getStructuringElement(cv.MORPH_ELLIPSE,(3,3))
@@ -44,16 +44,17 @@ class Detector:
         for c in contours:
             if cv.contourArea(c) > 100:
                 large_contours.append(c)
-        print (len(large_contours))
 
         annotated_image = cv.drawContours(image, large_contours, -1, (255,0,0), 3)
 
-        if debug:            
+        if debug:
             cv.imshow('mask', fgmask)
             cv.imshow('annotated_detections', annotated_image)
 
         if len(large_contours) == 0:
             return no_event
+
+        print (f"Raw motion detected ({len(contours)} contours), let's see if it triggers an event")
 
         # Let the detector enough time to initialize.
         if self.num_images_processed < self.options.num_images_to_initialize:
