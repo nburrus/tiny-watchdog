@@ -15,6 +15,8 @@ import imageio
 import shutil
 import ffmpeg
 
+import motion_detector
+
 debug = False
 
 #  tmp_motion_alert_buffer/
@@ -54,28 +56,6 @@ def createMp4(filenames, outputMp4):
     ffmpeg_process.stdin.close()
     ffmpeg_process.wait()
     print ("{} written".format(outputMp4))
-
-class MotionDetector:
-    def __init__(self, options):
-        self.options = options
-        self.fgbg = cv.bgsegm.createBackgroundSubtractorMOG()
-        # self.fgbg = cv.bgsegm.createBackgroundSubtractorGSOC()
-        self.kernel = cv.getStructuringElement(cv.MORPH_ELLIPSE,(3,3))
-
-        self.blobDetector = cv.SimpleBlobDetector_create()
-
-    def processImage(self, image):
-        return
-        fgmask = self.fgbg.apply(image)
-        fgmask = cv.morphologyEx(fgmask, cv.MORPH_OPEN, self.kernel)
-        print (fgmask.dtype)
-
-        blobs = self.blobDetector.detect(fgmask) 
-        im_with_blobs = cv.drawKeypoints(image, blobs, np.array([]), (0,0,255), cv.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
-
-        if debug:
-            cv.imshow('mask',fgmask)        
-            cv.imshow('blobs',im_with_blobs)
 
 class Archiver:    
     def __init__(self, options):
