@@ -26,10 +26,9 @@ class Options:
 class Detector:
     def __init__(self, options=Options()):
         self.options = options
-        # self.fgbg = cv.bgsegm.createBackgroundSubtractorMOG()
-        # self.fgbg = cv.bgsegm.createBackgroundSubtractorGMG()
-        self.fgbg = cv.bgsegm.createBackgroundSubtractorCNT()
-        #self.fgbg = cv.bgsegm.createBackgroundSubtractorMOG()
+        self.fgbg = cv.bgsegm.createBackgroundSubtractorMOG(history=self.options.num_images_to_initialize, nmixtures=5)
+        # self.fgbg = cv.bgsegm.createBackgroundSubtractorGMG(initializationFrames=self.options.num_images_to_initialize)
+        # self.fgbg = cv.bgsegm.createBackgroundSubtractorCNT(minPixelStability=15, maxPixelStability=15*60)
         self.kernel = cv.getStructuringElement(cv.MORPH_ELLIPSE,(3,3))
         self.num_images_processed = 0
         self.last_detection_date = None
