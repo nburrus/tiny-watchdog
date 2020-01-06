@@ -1,5 +1,10 @@
 <script src="{{ url_for('static', filename='jquery.min.js') }}"></script>
 <script src="{{ url_for('static', filename='bootstrap.min.js') }}"></script>
+<script>
+function slowRate(video, rate) {
+    video.playbackRate = rate;
+}
+</script>
 
 <!-- Generated through https://www.bootstrap-live-customizer.com/ .
      First selecting the Cosmo theme, and changing the grid to
@@ -12,19 +17,32 @@
         <title>{{ title }}</title>
     </head>
     <body>
-        <h1>Last image</h1>
-        <img src="{{ data.lastImage }}"></img>
-
-        <h1>Today</h1>
-        <video controls>
-            <source src="{{ data.videosPerDay[-1] }}" type="video/mp4">
-            Your browser does not support the video tag.
-        </video>
-
-        <h1>Yesterday</h1>
-        <video controls>
-            <source src="{{ data.videosPerDay[-2] }}" type="video/mp4">
-            Your browser does not support the video tag.
-        </video>
+        <table>
+            <tr rowspan=2>
+                <td rowspan=2><img src="{{ data.lastImage }}"></img></td>
+                <td>
+                    <video onplay="slowRate(this, 0.5)" width=320 controls>
+                        <source src="{{ data.videosPerDay[-1] }}" type="video/mp4">
+                        Your browser does not support the video tag.
+                    </video>
+                </td>
+            </tr>
+            <tr>
+                <td>
+                <video onplay="slowRate(this, 0.5)" width=320 controls>
+                    <source src="{{ data.videosPerDay[-2] }}" type="video/mp4">
+                    Your browser does not support the video tag.
+                </video>
+                </td>
+            </tr>            
+        </table>
+        <h1>Alerts Today</h1>
+        <table>
+            {{ data.daily_alerts_table_content[-1]|safe }}
+        </table>
+        <h1>Alerts Yesterday</h1>
+        <table>
+            {{ data.daily_alerts_table_content[-2]|safe }}
+        </table>
     </body>
 </html>
