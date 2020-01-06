@@ -210,7 +210,7 @@ class Archiver:
         Alert = namedtuple('Alert', 'start_time folder_name folder_path')
         active_alert = Alert(start_time = now, folder_name=folder_name, folder_path=folder_path)
         with open(self.alert_db, 'a') as f:
-            json_str = f"{{'folder_name': '{folder_name}'}}"
+            json_str = f'{{"folder_name": "{folder_name}"}}'
             f.write(f"{formatted_now} {event_name} {json_str}\n")
         self.activeAlerts.append (active_alert)
 
