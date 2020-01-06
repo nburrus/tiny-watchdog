@@ -9,7 +9,7 @@ from enum import Enum
 import cv2 as cv
 import numpy as np
 
-debug = True
+debug = False
 
 class Event(Enum):
     NONE = 0
