@@ -11,6 +11,7 @@ RUN apt-get update && apt-get install -y \
 RUN pip install opencv-python opencv-contrib-python flask imageio zmq ffmpeg-python
 
 COPY watchdog.py /deploy/
+COPY motion_detector.py /deploy/
 COPY image_server.py /deploy/
 COPY web_server /deploy/web_server
 COPY docker-entrypoint.sh /deploy/entrypoint.sh
