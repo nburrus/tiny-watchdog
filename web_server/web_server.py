@@ -51,9 +51,11 @@ def parse_recent_alerts():
         # cut it.
         if len(alerts) > 0 and file_pos > 0:
             alerts = alerts[1:]
+        
+        alerts = reversed(alerts) # most recent first.
         # Remove lines that do not finish with \n, might be because watchdog
         # is still writing to it of because we started in the middle of a line.
-        alerts = filter(lambda l: l.endswith('\n'), alerts)
+        alerts = filter(lambda l: l.endswith('\n'), alerts)        
         print (alerts)
     
     alerts_per_day = {}
