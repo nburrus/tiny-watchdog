@@ -115,6 +115,8 @@ class Archiver:
             shutil.rmtree(tmpDayDir)
 
     def maybeFlushPreviousDays(self, now):
+        self.maybeFlushOldAlerts(now)
+
         dayFolders = os.listdir(self.day_buffer_dir)
         print ('dayFolders', dayFolders)
         for dirName in dayFolders:
@@ -130,6 +132,26 @@ class Archiver:
             if year == now.year and month == now.month and day == now.day:
                 continue 
             self.flushDay(fullPath, year, month, day, isPartial=False)
+
+    def maybeFlushOldAlerts(self, now):        
+        alertFolders = os.listdir(self.alerts_dir)
+        print ('alertFolders', alertFolders)
+        for dirName in alertFolders:
+            fullPath = os.path.join(self.alerts_dir, dirName)
+            if not os.path.isdir(fullPath):
+                continue
+            m = re.match("(\d\d\d\d)-(\d\d)-(\d\d)", dirName)
+            if not m:
+                continue
+            year = int(m.group(1))
+            month = int(m.group(2))
+            day = int(m.group(3))
+            # Keep alerts for 30 days.
+            if (now - datetime(year=year, month=month, day=day) < timedelta(days=30)):
+                print ("Keeping recent alert " + dirName)
+                continue 
+            print ("Removing old alert " + dirName)
+            shutil.rmtree(fullPath)
 
     def handleDayBuffer(self, now, image):
         imageDirName = now.strftime("%Y-%m-%d")
@@ -165,7 +187,7 @@ class Archiver:
         if (len(images) > self.options.recent_buffer_size):
             toRemove = images[0:len(images)-self.options.recent_buffer_size]
             for f in toRemove:
-                os.remove(os.path.join(self.recent_buffer_dir, f))
+                os.remove(os.path.join(self.recent_buffer_dir, f))    
 
     def handleCurrentAlert(self, now, image):
         alerts_to_remove = []
