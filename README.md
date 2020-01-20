@@ -1,12 +1,12 @@
 # tiny-watchdog
 
-Minimalistic tools to monitor a place with an IP camera in a private network and create a low-bandwidth website available from anywhere.
+Minimalistic tools to monitor a place with an IP camera in a private network and create a low-bandwidth website available from anywhere. **Important: this is not meant to be a well-maintained software for general use, I did it mostly for my particular use case. But I'm keeping this repo public in case someone can find something interesting in it.**
 
 # Overview
 
 - `image_server.py`: runs on the local network (e.g. from a netbook), connects to the IP camera via rtsp, and acts as a TCP server (ZMQ) that can send the images at a low-frequency (e.g 1/second). In addition to keeping the bandwidth much smaller, this makes it easy to access the images over a firewall by allowing a single TCP port, while rtsp is usually a pain.
 
-- `tiny-watchdog.py`: connects to the image server, and stores the images in a local cache in a rotating way. Also creates summary videos of the day. Might get extended to do motion detection and send alerts in the future, but right now it only stores the data.
+- `tiny-watchdog.py`: connects to the image server, and stores the images in a local cache in a rotating way. Also creates summary videos of the day and alerts based on simple motion detection.
 
 - `webserver/webserver.py`: minimalistic Flask webserver to expose the images stored by `tiny-watchdog.py`.
 
@@ -15,13 +15,13 @@ Minimalistic tools to monitor a place with an IP camera in a private network and
 - You need Python 3.x
 
 - Install the required modules
-	- For the local server: `pip install ffmpeg-python opencv-python opencv-contrib-python zmq`
-	- For the public server: `pip install flask ffmpeg-python opencv-python opencv-contrib-python zmq`
+	- For the image server: `pip install ffmpeg-python opencv-python opencv-contrib-python zmq`
+	- For the watchdog and web server: `pip install flask ffmpeg-python opencv-python opencv-contrib-python zmq`
 
 
 # Sample usage
 
-**On the local server** (e.g. notebook):
+**On the local server** (e.g. notebook or raspberry pi):
 
 ```
 ./image_server.py --bind-url 'tcp://*:4242' --password mysecretpassword "rtsp://192.168.1.20:554/onvif1" 1280 720
@@ -32,6 +32,8 @@ Assuming the IP camera onvif address is `192.168.1.20:554/onvif1` (this will dep
 This server will listen on port 4242 and send the images to anyone connecting to this port with ZMQ and the specified password.
 
 You need to open that port to the firewall.
+
+If you want to use a raspberry pi camera, just specify `picamera` instead of the `rtsp` URL.
 
 **On the public server**
 
