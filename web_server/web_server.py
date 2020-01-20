@@ -85,23 +85,22 @@ def compute_alerts_table_content():
             daily_alerts_table_content.append(None)
             continue
         alerts = alerts_per_day[target_day]
-        num_rows = math.ceil(len(alerts) / 4)
-        num_columns = 4
         content = ""
-        for row in range(0, num_rows):
-            content += "<tr>\n  "
-            for col in range(0, num_columns):
-                idx = row*num_columns + col
-                if idx >= len(alerts):
-                    content += "<td></td>\n"
-                else:
-                    alert = alerts[idx]
-                    folder_name = json.loads(alert[2])['folder_name']
-                    html_folder_path = Path('data') / 'alerts' / folder_name
-                    video_path = html_folder_path / 'before_and_after.mp4'
-                    poster_path = html_folder_path / next((alerts_dir / folder_name).glob('*_annotated.jpg')).name
-                    content += f'<td><video width="320" poster="{poster_path}" onplay="slowRate(this, 0.2)" controls><source src="{video_path}" type="video/mp4">Your browser does not support the video tag.</video></td>\n'
-            content += "</tr>\n"
+        for alert in alerts:
+            folder_name = json.loads(alert[2])['folder_name']
+            html_folder_path = Path('data') / 'alerts' / folder_name
+            video_path = html_folder_path / 'before_and_after.mp4'
+            poster_path = html_folder_path / next((alerts_dir / folder_name).glob('*_annotated.jpg')).name
+            content += (f'<video width="480" poster="{poster_path}"'
+                        + ' onplay="slowRate(this, 0.2)"'
+                        # The goal here is to hide the controls initially so we can clearly see the annotated image
+                        # This is especially important on iOS because the play button eats half of the image in the center..
+                        # Now when the user clicks on the image, we want to enable the controls and start playing it.
+                        # With chrome doing so without the setTimeout does not actually starts playing it.
+                        # Removing the custom onclick then restores the usual click behavior to control the window.
+                        + ' onclick="this.controls = true; var self = this; setTimeout(function() { self.play(); }, 0); this.onclick=null;"'
+                        + '>'
+                        + f'<source src="{video_path}" type="video/mp4">Your browser does not support the video tag.</video>\n')
         daily_alerts_table_content.append(content)
     return daily_alerts_table_content
 

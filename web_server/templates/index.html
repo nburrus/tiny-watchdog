@@ -37,9 +37,9 @@ function slowRate(video, rate) {
             </tr>            
         </table>
         <h1>Alerts Today</h1>
-        <table>
+        <div>
             {{ data.daily_alerts_table_content[-1]|safe }}
-        </table>
+        </div>
         <h1>Alerts Yesterday</h1>
         <table>
             {{ data.daily_alerts_table_content[-2]|safe }}
