@@ -41,7 +41,7 @@ class Detector:
         contours, hierarchy = cv.findContours(fgmask, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
         large_contours = []
         for c in contours:
-            if cv.contourArea(c) > 100:
+            if cv.contourArea(c) > 20*20:
                 large_contours.append(c)
 
         annotated_image = cv.drawContours(image, large_contours, -1, (255,0,0), 3)
