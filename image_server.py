@@ -70,8 +70,8 @@ class PiCameraCaptureSource:
         try:
             self.camera.annotate_text = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
             self.camera.capture(self.bgr_buffer, 'bgr')
-        except:
-            print ("Failed to capture image.")
+        except Exception as e:
+            print ("Failed to capture image: " + str(e))
             return None
         return self.bgr_buffer
 

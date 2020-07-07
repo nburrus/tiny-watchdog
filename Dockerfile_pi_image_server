@@ -1,0 +1,34 @@
+FROM debian:buster-slim
+
+# Opencv-python needs a few libraries.
+RUN apt-get update && apt-get install -y \
+    python3 \
+    python3-opencv \
+    python3-distutils \
+    curl
+
+RUN curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py && python3 get-pip.py
+
+# Enable piwheels
+RUN echo "[global]\nextra-index-url=https://www.piwheels.org/simple\n" >> /etc/pip.conf
+
+RUN pip3 install zmq picamera ffmpeg
+
+COPY image_server.py /deploy/
+COPY docker-entrypoint-pi-image-server.sh /deploy/entrypoint.sh
+
+ENV IMAGE_SERVER_PASSWORD mypassword
+ENV LD_LIBRARY_PATH /opt/vc/lib
+
+VOLUME ["/data"]
+EXPOSE 4242
+ENTRYPOINT ["/deploy/entrypoint.sh"]
+
+# docker build -t nburrus/private:tiny-watchdog-pi -f Dockerfile_pi_image_server .
+# docker run --rm -it --name watchdog-server \
+#   -p 4242:42442 \
+#   --device /dev/vchiq \
+#   --device /dev/vcsm \
+#   -v /opt/vc:/opt/vc \
+#   --env IMAGE_SERVER_PASSWORD=xxxxxxx \
+#   nburrus/private:tiny-watchdog-pi
