@@ -20,15 +20,20 @@ COPY docker-entrypoint-pi-image-server.sh /deploy/entrypoint.sh
 ENV IMAGE_SERVER_PASSWORD mypassword
 ENV LD_LIBRARY_PATH /opt/vc/lib
 
+# Not sure if required, but some forums said so.
+ENV READTHEDOCS=True
+
 VOLUME ["/data"]
 EXPOSE 4242
 ENTRYPOINT ["/deploy/entrypoint.sh"]
 
 # docker build -t nburrus/private:tiny-watchdog-pi -f Dockerfile_pi_image_server .
 # docker run --rm -it --name watchdog-server \
-#   -p 4242:42442 \
+#   -p 4242:4242 \
 #   --device /dev/vchiq \
-#   --device /dev/vcsm \
+#   --device /dev/vcsm-cma \
 #   -v /opt/vc:/opt/vc \
 #   --env IMAGE_SERVER_PASSWORD=xxxxxxx \
 #   nburrus/private:tiny-watchdog-pi
+
+# Note: vcsm-cma used to be vcsm
